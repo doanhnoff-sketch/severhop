@@ -1,20 +1,54 @@
-local TeleportService = game:GetService("TeleportService")
-local HttpService = game:GetService("HttpService")
+-- Cấu hình tên 2 acc của cậu
+local Acc1 = "doanhlo"
+local Acc2 = "ddjsjcosc"
+
 local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 
-local PlaceID = game.PlaceId
-local JobID = game.JobId
+-- Xác định acc còn lại để né
+local targetToAvoid = (LocalPlayer.Name == Acc1) and Acc2 or Acc1
 
-while true do
-    task.wait(600)
+local function HopServer()
+    local PlaceID = game.PlaceId
+    local JobID = game.JobId
+    local HttpService = game:GetService("HttpService")
+    local TeleportService = game:GetService("TeleportService")
 
+    -- Dùng "Desc" để tìm những server đông người nhất
     local url = "https://games.roblox.com/v1/games/"..PlaceID.."/servers/Public?sortOrder=Desc&limit=100"
-    local servers = HttpService:JSONDecode(game:HttpGet(url))
-
-    for _, v in pairs(servers.data) do
-        if v.playing < v.maxPlayers and v.id ~= JobID then
-            TeleportService:TeleportToPlaceInstance(PlaceID, v.id, Players.LocalPlayer)
-            break
+    
+    local success, result = pcall(function() return game:HttpGet(url) end)
+    if success then
+        local servers = HttpService:JSONDecode(result)
+        for _, v in pairs(servers.data) do
+            -- Chỉ nhảy vào server còn chỗ trống, đông người và không phải server hiện tại
+            if v.playing < v.maxPlayers and v.playing > 5 and v.id ~= JobID then
+                TeleportService:TeleportToPlaceInstance(PlaceID, v.id, LocalPlayer)
+                break
+            end
         end
     end
 end
+
+local function CheckForAlt()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player.Name == targetToAvoid then
+            warn("⚠️ Phát hiện " .. targetToAvoid .. " trong server đông! Đang tìm server đông khác...")
+            HopServer()
+            return true
+        end
+    end
+    return false
+end
+
+-- 1. Kiểm tra ngay khi vào game
+CheckForAlt()
+
+-- 2. Đề phòng acc kia nhảy vào sau
+Players.PlayerAdded:Connect(function(player)
+    if player.Name == targetToAvoid then
+        HopServer()
+    end
+end)
+
+print("🛡️ Hệ thống né acc phụ (Ưu tiên server đông) đã sẵn sàng!")
