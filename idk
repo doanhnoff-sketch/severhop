@@ -1,7 +1,7 @@
--- Chờ game load
-if not game:IsLoaded() then game.Loaded:Wait() end
+-- Reset chặn
+_G.MaxHopExecuted = nil 
 
--- Chặn chạy đè
+if not game:IsLoaded() then game.Loaded:Wait() end
 if _G.MaxHopExecuted then return end
 _G.MaxHopExecuted = true
 
@@ -15,23 +15,25 @@ local function ExecuteMaxHop()
     end)
     
     if success then
-        local servers = game:GetService("HttpService"):JSONDecode(result)
+        local servers = game:GetService("HttpService"):JSONDecode(result).data
         
-        for _, v in pairs(servers.data) do
-            -- Chỉ thử các server còn ít nhất 1-2 chỗ trống để tránh lỗi full khi đang load
-            if v.playing < 31 and v.id ~= game.JobId then
-                local teleported = false
-                
-                -- Lệnh nhảy server
+        -- Sắp xếp lại danh sách để chắc chắn server đông nhất nằm đầu tiên
+        table.sort(servers, function(a, b)
+            return a.playing > b.playing
+        end)
+
+        for _, v in pairs(servers) do
+            -- Tiêu chí: Đông nhất nhưng phải dưới 32 và không phải server cũ
+            if v.playing < 32 and v.id ~= game.JobId then
                 game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, v.id, LocalPlayer)
                 
-                -- Nếu sau 6 giây vẫn chưa rời khỏi server cũ (nhảy thất bại vì full)
+                -- Đợi 6s để kiểm tra xem có vào được không
                 task.wait(6)
-                -- Tiếp tục thử server tiếp theo trong danh sách
+                -- Nếu vẫn còn ở đây thì vòng lặp for sẽ tự thử server đông thứ 2, thứ 3...
             end
         end
         
-        -- Nếu chạy hết danh sách mà vẫn k vô được, load lại danh sách mới sau 2s
+        -- Nếu thử hết 100 cái vẫn không xong thì load lại
         task.wait(2)
         ExecuteMaxHop()
     else
@@ -40,19 +42,16 @@ local function ExecuteMaxHop()
     end
 end
 
--- Kiểm tra acc phụ lúc mới vào
+-- Kiểm tra acc phụ lúc vào
 local isTargetHere = false
 for _, p in pairs(game.Players:GetPlayers()) do
-    if p.Name == target then
-        isTargetHere = true
-        break
-    end
+    if p.Name == target then isTargetHere = true break end
 end
 
 if isTargetHere then
     ExecuteMaxHop()
 else
-    -- Treo đúng 10p rồi nhảy server đông nhất
+    -- Treo 10p rồi mới tìm server đông nhất để nhảy
     task.delay(600, function()
         ExecuteMaxHop()
     end)
