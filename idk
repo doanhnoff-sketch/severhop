@@ -1,19 +1,21 @@
+-- Chờ game load xong hoàn toàn
 if not game:IsLoaded() then game.Loaded:Wait() end
 
--- Cấu hình 2 acc của cậu
-local Acc1 = "doanhlo"
-local Acc2 = "ddjsjcosc"
+-- Đảm bảo chỉ chạy 1 lần duy nhất để không spam F9
+if _G.SingleCheckExecuted then return end
+_G.SingleCheckExecuted = true
+
+local Acc1, Acc2 = "doanhlo", "ddjsjcosc"
 local LocalPlayer = game.Players.LocalPlayer
-local targetToAvoid = (LocalPlayer.Name == Acc1) and Acc2 or Acc1
+local target = (LocalPlayer.Name == Acc1) and Acc2 or Acc1
 
 local function ExecuteHop()
-    local HttpService = game:GetService("HttpService")
-    local url = "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Desc&limit=100"
-    local success, result = pcall(function() return game:HttpGet(url) end)
+    local success, result = pcall(function() 
+        return game:HttpGet("https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Desc&limit=100") 
+    end)
     if success then
-        local servers = HttpService:JSONDecode(result)
+        local servers = game:GetService("HttpService"):JSONDecode(result)
         for _, v in pairs(servers.data) do
-            -- Tìm server đông (>5 người) và không phải server hiện tại
             if v.playing < v.maxPlayers and v.playing > 5 and v.id ~= game.JobId then
                 game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, v.id, LocalPlayer)
                 break
@@ -22,22 +24,27 @@ local function ExecuteHop()
     end
 end
 
--- Chạy script gốc của cậu
+-- Chạy script từ GitHub của cậu
 task.spawn(function()
     pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/doanhnoff-sketch/severhop/refs/heads/main/idk"))() end)
 end)
 
--- CHỈ KIỂM TRA MỘT LẦN DUY NHẤT KHI VỪA VÀO SERVER
-local function CheckOnce()
-    for _, p in pairs(game.Players:GetPlayers()) do
-        if p.Name == targetToAvoid then 
-            ExecuteHop() 
-            return -- Thoát hàm ngay sau khi kích hoạt Hop
-        end
+-- BƯỚC KIỂM TRA DUY NHẤT LÚC VÀO SERVER
+local isTargetHere = false
+for _, p in pairs(game.Players:GetPlayers()) do
+    if p.Name == target then
+        isTargetHere = true
+        break
     end
 end
 
--- Thực hiện kiểm tra
-CheckOnce()
-
-print("Hệ thống đã kiểm tra né " .. targetToAvoid .. " xong.")[cite: 1]
+if isTargetHere then
+    -- Thấy là nhảy luôn, không chờ đợi
+    ExecuteHop()
+else
+    -- Không thấy thì treo máy đúng 10p sau mới nhảy tiếp
+    print("✅ Sạch bóng " .. target .. ". Sẽ tự động Hop sau 10 phút.")
+    task.delay(600, function()
+        ExecuteHop()
+    end)
+end
