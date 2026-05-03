@@ -1,8 +1,10 @@
 if not game:IsLoaded() then game.Loaded:Wait() end
 
+-- Cấu hình 2 acc của cậu
 local Acc1 = "doanhlo"
 local Acc2 = "ddjsjcosc"
-local targetToAvoid = (game.Players.LocalPlayer.Name == Acc1) and Acc2 or Acc1
+local LocalPlayer = game.Players.LocalPlayer
+local targetToAvoid = (LocalPlayer.Name == Acc1) and Acc2 or Acc1
 
 local function ExecuteHop()
     local HttpService = game:GetService("HttpService")
@@ -11,8 +13,9 @@ local function ExecuteHop()
     if success then
         local servers = HttpService:JSONDecode(result)
         for _, v in pairs(servers.data) do
+            -- Tìm server đông (>5 người) và không phải server hiện tại
             if v.playing < v.maxPlayers and v.playing > 5 and v.id ~= game.JobId then
-                game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, v.id, game.Players.LocalPlayer)
+                game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, v.id, LocalPlayer)
                 break
             end
         end
@@ -24,21 +27,17 @@ task.spawn(function()
     pcall(function() loadstring(game:HttpGet("https://raw.githubusercontent.com/doanhnoff-sketch/severhop/refs/heads/main/idk"))() end)
 end)
 
--- Hop định kỳ mỗi 10 phút
-task.spawn(function()
-    while task.wait(600) do ExecuteHop() end
-end)
-
--- Né acc phụ ngay lập tức
-local function Check()
+-- CHỈ KIỂM TRA MỘT LẦN DUY NHẤT KHI VỪA VÀO SERVER
+local function CheckOnce()
     for _, p in pairs(game.Players:GetPlayers()) do
-        if p.Name == targetToAvoid then ExecuteHop() end
+        if p.Name == targetToAvoid then 
+            ExecuteHop() 
+            return -- Thoát hàm ngay sau khi kích hoạt Hop
+        end
     end
 end
 
-Check()
-game.Players.PlayerAdded:Connect(function(player)
-    if player.Name == targetToAvoid then ExecuteHop() end
-end)
+-- Thực hiện kiểm tra
+CheckOnce()
 
-print("Hệ thống né " .. targetToAvoid .. " đang hoạt động.") --
+print("Hệ thống đã kiểm tra né " .. targetToAvoid .. " xong.")[cite: 1]
